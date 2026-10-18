@@ -101,10 +101,43 @@ function waitFor(predicate, timeoutMs = 3000, stepMs = 40) {
 test('injectReload adds the marker exactly once', () => {
   const once = injectReload('<html><body><h1>x</h1></body></html>');
   assert.equal(once.split('data-dsh-live-preview').length - 1, 1);
+  assert.match(once, /EventSource/);
+  assert.match(once, /__live\//);
+  assert.match(once, /version/);
   const twice = injectReload(once);
   assert.equal(twice, once);
   const noBody = injectReload('<h1>x</h1>');
   assert.equal(noBody.split('data-dsh-live-preview').length - 1, 1);
+});
+
+test('version endpoint advances after a change, without a cookie', async () => {
+  await withServer('version', async ({ origin, token, root }) => {
+    const first = await fetch(`${origin}/__live/version?t=${encodeURIComponent(token)}`);
+    assert.equal(first.status, 200);
+    const firstBody = await first.json();
+    assert.equal(typeof firstBody.version, 'number');
+
+    const unauthenticated = await fetch(`${origin}/__live/version`);
+    assert.equal(unauthenticated.status, 401);
+
+    await fsp.writeFile(
+      path.join(root, 'index.html'),
+      '<html><body>version two</body></html>',
+      'utf8',
+    );
+    const startedAt = Date.now();
+    let version = firstBody.version;
+    while (Date.now() - startedAt < 4000) {
+      const response = await fetch(`${origin}/__live/version?t=${encodeURIComponent(token)}`);
+      const body = await response.json();
+      if (body.version > firstBody.version) {
+        version = body.version;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    assert.ok(version > firstBody.version, 'version should advance after a file change');
+  });
 });
 
 test('safeResolve rejects traversal and keeps paths inside the root', () => {
