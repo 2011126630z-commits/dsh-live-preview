@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format is based on
 - The panel shows an "Editing … · line N" chip with Locate / clear actions; it fades after about 15 seconds.
 - `live_preview` gained `focus` (a selector, or `path` + `line`) and `clear` actions.
 - The focus survives the reload that follows a save (kept in `sessionStorage` for the preview origin).
+- Fixed a reload race: one save now reloads the page exactly once, so the highlight is not wiped by the panel's
+  fallback reload.
 - Tests: 19 (adds marker injection, line diff, CSS selector resolution, focus reporting, manual focus over SSE).
 
 ### 中文 / Chinese
@@ -24,6 +26,7 @@ All notable changes to this project are documented here. The format is based on
 - 面板显示「正在编辑 … · 第 N 行」的状态条，带「定位 / 清除」，约 15 秒后淡出。
 - `live_preview` 新增 `focus`（选择器，或 `path` + `line`）与 `clear`。
 - 高亮会跟随保存后的重载一起生效（存在预览 origin 的 `sessionStorage` 里）。
+- 修复重载竞态：一次保存只重载一次，高亮不会被面板兜底刷新冲掉。
 - 测试 19 个（新增行标记注入、行 diff、CSS 选择器解析、焦点上报、SSE 手动焦点）。
 
 ## [0.1.0] — 2026-10-19
