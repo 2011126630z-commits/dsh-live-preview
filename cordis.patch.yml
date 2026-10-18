@@ -6,7 +6,7 @@
 #   autoReload:  whether file changes broadcast a reload to open previews
 - insert:
     - id: dsh-live-preview
-      name: '@local/dsh-live-preview'
+      name: 'dsh-live-preview'
       config:
         port: 8123
         autoReload: true

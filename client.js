@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: '@local/dsh-live-preview',
+  id: 'dsh-live-preview',
   factory(require) {
     const React = require('react');
     const h = React.createElement;

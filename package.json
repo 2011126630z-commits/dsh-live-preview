@@ -1,8 +1,16 @@
 {
-  "name": "@local/dsh-live-preview",
+  "name": "dsh-live-preview",
   "version": "0.1.0",
-  "private": true,
-  "description": "Live preview panel for workspace pages inside DeepSeek Harness",
+  "description": "Live-preview panel for DeepSeek Harness: preview workspace pages beside the chat; reloads on every save. · DeepSeek Harness 实时预览插件：边聊边看你的页面，改完自动刷新。",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "live-preview",
+    "hot-reload",
+    "developer-tools"
+  ],
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -17,7 +25,10 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "README.zh-CN.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test --test-isolation=none"
