@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Host half of the live-preview plugin.
  *
  * Responsibilities:
@@ -315,6 +315,7 @@ export function apply(ctx, rawConfig) {
       error: state.lastError,
       origin: current.origin,
       token: current.token,
+      reloadVersion: current.version,
       roots: await allowedRoots(),
     };
   }

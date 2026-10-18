@@ -110,6 +110,18 @@ test('injectReload adds the marker exactly once', () => {
   assert.equal(noBody.split('data-dsh-live-preview').length - 1, 1);
 });
 
+test('injected reload script parses as valid JavaScript', () => {
+  const html = injectReload('<html><body><p>x</p></body></html>');
+  const open = html.indexOf('<script data-dsh-live-preview');
+  assert.ok(open >= 0);
+  const start = html.indexOf('>', open) + 1;
+  const end = html.indexOf('</script>', start);
+  const code = html.slice(start, end);
+  assert.ok(code.length > 100);
+  // Compiles the snippet without executing it, so a syntax error fails the test.
+  assert.doesNotThrow(() => new Function(code));
+});
+
 test('version endpoint advances after a change, without a cookie', async () => {
   await withServer('version', async ({ origin, token, root }) => {
     const first = await fetch(`${origin}/__live/version?t=${encodeURIComponent(token)}`);

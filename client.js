@@ -180,6 +180,7 @@ window.__ModuleLoader__.load({
         token: '',
         roots: [],
         rev: -1,
+        reloadVersion: -1,
         error: '',
         watchError: '',
       };
@@ -277,6 +278,10 @@ window.__ModuleLoader__.load({
         watchError: state.watchError || '',
         origin: state.origin || store.get().origin,
         token: state.token || store.get().token,
+        reloadVersion:
+          typeof state.reloadVersion === 'number'
+            ? state.reloadVersion
+            : store.get().reloadVersion,
         roots: Array.isArray(state.roots) ? state.roots : store.get().roots,
         error: '',
       });
@@ -338,10 +343,26 @@ window.__ModuleLoader__.load({
       const [localError, setLocalError] = useState('');
       const [truncated, setTruncated] = useState(false);
       const lastRoot = useRef(snapshot.root);
+      const lastReloadVersion = useRef(null);
 
       useEffect(() => {
         savePrefs({ width, device });
       }, [width, device]);
+
+      // The parent drives reloads from the server version counter, so a previewed
+      // page that blocks or strips the injected script still refreshes.
+      useEffect(() => {
+        const version = snapshot.reloadVersion;
+        if (typeof version !== 'number') return;
+        if (lastReloadVersion.current === null) {
+          lastReloadVersion.current = version;
+          return;
+        }
+        if (version !== lastReloadVersion.current) {
+          lastReloadVersion.current = version;
+          setReloadKey((value) => value + 1);
+        }
+      }, [snapshot.reloadVersion]);
 
       useEffect(() => {
         if (lastRoot.current !== snapshot.root) {
