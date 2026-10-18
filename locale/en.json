@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Live Preview",
+    "description": "Preview workspace pages in a panel next to the conversation; file changes reload automatically, and the live_preview tool can open a page for you."
+  }
+}

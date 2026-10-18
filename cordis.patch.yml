@@ -1,0 +1,12 @@
+# Bundle patch for the live-preview plugin.
+# The row is inserted by `plugin_manager install_bundle` and can carry config:
+#   port:        loopback port for the preview server (0 = pick a free port)
+#   roots:       extra absolute directories allowed as preview roots
+#   ignore:      directory names skipped by the watcher and the file browser
+#   autoReload:  whether file changes broadcast a reload to open previews
+- insert:
+    - id: dsh-live-preview
+      name: '@local/dsh-live-preview'
+      config:
+        port: 8123
+        autoReload: true
