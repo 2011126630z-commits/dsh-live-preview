@@ -14,8 +14,10 @@ page, and it renders beside the conversation — every save reloads it. The agen
 - Preview panel docked to the right of the Harness UI; drag its left edge to resize, width and device mode are remembered
 - Workspace → directory → file browser with an `HTML` badge
 - **Auto reload on save** (SSE, with a version-poll fallback), toggleable, plus a manual reload button
+- **Focus on what is being edited** — the preview scrolls to and outlines the block that just changed, and the panel
+  shows an "Editing …" chip; automatic on save (HTML by source line, CSS by rule selector) and available through the tool
 - Device widths: full / 768 px / 375 px, and open-in-new-tab
-- Agent tool `live_preview` with `open` / `close` / `refresh` / `root`
+- Agent tool `live_preview` with `open` / `close` / `refresh` / `root` / `focus` / `clear`
 - Read-only preview server on loopback, one-time token + HttpOnly cookie, realpath containment checks
 - The previewed page runs on its own origin, isolated from the Harness UI origin
 
@@ -56,6 +58,27 @@ Open the live preview on maas-home-preview/index.html
 ```
 
 The agent calls `live_preview({ action: "open", path: "maas-home-preview/index.html" })`.
+
+## Focus — show the block being edited
+
+When a watched file changes, the plugin works out *where* the edit landed and tells the preview to point at it:
+
+- **HTML** — served pages carry `data-lp-line` markers on elements. The change is diffed against the last served
+  revision, and the element nearest the changed source line is scrolled into view and outlined.
+- **CSS** — the selector of the rule surrounding the changed line is resolved and every matching element is outlined
+  (up to 12).
+- Other text files — the panel still shows "Editing … · line N" without a page outline.
+
+The focus is carried through the reload (stored in `sessionStorage`), so it lands after the page has reloaded.
+You can also drive it explicitly:
+
+```jsonc
+{ "action": "focus", "selector": "#hero" }
+{ "action": "focus", "path": "index.html", "line": 312 }
+{ "action": "clear" }
+```
+
+The panel shows the current target with **Locate** (re-apply) and **×** (clear) actions; it fades after ~15 seconds.
 
 ## Configuration
 

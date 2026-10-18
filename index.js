@@ -316,6 +316,7 @@ export function apply(ctx, rawConfig) {
       origin: current.origin,
       token: current.token,
       reloadVersion: current.version,
+      focus: current.focus,
       roots: await allowedRoots(),
     };
   }
@@ -429,6 +430,25 @@ export function apply(ctx, rawConfig) {
         sendJson(res, 200, await handleRoot(body));
         return;
       }
+      if (req.method === 'POST' && sub === '/focus') {
+        const body = await readJsonBody(req);
+        const action = String(body.action || 'refocus');
+        let sent = 0;
+        if (action === 'clear') {
+          sent = preview.clearFocus();
+        } else if (action === 'selector' && typeof body.selector === 'string' && body.selector.trim()) {
+          sent = preview.setFocus({
+            kind: 'selector',
+            selector: body.selector.trim(),
+            label: `正在查看 ${body.selector.trim()}`,
+          });
+        } else {
+          sent = preview.refocus();
+        }
+        bump();
+        sendJson(res, 200, { ok: true, sent, focus: preview.getState().focus });
+        return;
+      }
       if (req.method === 'POST' && sub === '/refresh') {
         const sent = preview.reloadAll(true);
         bump();
@@ -485,23 +505,31 @@ export function apply(ctx, rawConfig) {
   const tool = {
     name: 'live_preview',
     description:
-      '在 Harness 界面的「实时预览」面板里打开或切换一个工作区页面。用于边聊边看正在制作的 HTML 页面；文件改动后面板会自动刷新。path 可以是绝对路径，也可以是相对当前预览根目录的路径。',
+      '在 Harness 界面的「实时预览」面板里打开或切换一个工作区页面，或高亮页面中正在修改的那一块。用于边聊边看正在制作的 HTML 页面；文件改动后面板会自动刷新，并自动高亮被改动的区块（HTML 按源码行、CSS 按选择器）。path 可以是绝对路径，也可以是相对当前预览根目录的路径。',
     parameters: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['open', 'close', 'refresh', 'root'],
+          enum: ['open', 'close', 'refresh', 'root', 'focus', 'clear'],
           description:
-            'open：打开/切换页面；close：关闭面板；refresh：强制刷新当前预览；root：只切换预览根目录。',
+            'open：打开/切换页面；close：关闭面板；refresh：强制刷新当前预览；root：只切换预览根目录；focus：高亮一块区域（用 selector，或 path+line）；clear：清除高亮。',
         },
         path: {
           type: 'string',
-          description: '要预览的 HTML 文件或项目目录；相对路径基于当前预览根目录。',
+          description: '要预览的 HTML 文件或项目目录；focus 时表示要高亮的文件。',
         },
         root: {
           type: 'string',
           description: '预览根目录的绝对路径（可选，等价于先切换根目录）。',
+        },
+        selector: {
+          type: 'string',
+          description: 'focus 用的 CSS 选择器，例如 "#hero" 或 ".card"。',
+        },
+        line: {
+          type: 'integer',
+          description: 'focus 用的源码行号（配合 path）。',
         },
       },
       required: ['action'],
@@ -541,6 +569,47 @@ export function apply(ctx, rawConfig) {
           const sent = preview.reloadAll(true);
           bump();
           return { ok: true, message: `已刷新 ${sent} 个预览连接` };
+        }
+        if (action === 'clear') {
+          preview.clearFocus();
+          bump();
+          return { ok: true, message: '已清除高亮' };
+        }
+        if (action === 'focus') {
+          const selector = typeof input.selector === 'string' ? input.selector.trim() : '';
+          if (selector) {
+            preview.setFocus({
+              kind: 'selector',
+              selector,
+              label: `正在查看 ${selector}`,
+            });
+            bump();
+            return { ok: true, message: `已高亮 ${selector}` };
+          }
+          const focusPath = input.path || input.root;
+          if (!focusPath) {
+            return { ok: false, message: 'focus 需要 selector，或 path（可带 line）' };
+          }
+          await ensureRoot(agentCwd(exec));
+          const rootPath = preview.getState().root;
+          const abs = path.isAbsolute(focusPath)
+            ? path.resolve(focusPath)
+            : path.resolve(rootPath || process.cwd(), focusPath);
+          const stat = await fsp.stat(abs).catch(() => null);
+          if (!stat || !stat.isFile()) {
+            return { ok: false, message: `文件不存在：${abs}` };
+          }
+          const line = Number.isInteger(input.line) && input.line > 0 ? input.line : 1;
+          const rel = rootPath && isInside(rootPath, abs) ? toPosixRel(rootPath, abs) : path.basename(abs);
+          preview.setFocus({
+            kind: 'lines',
+            file: rel,
+            from: line,
+            to: line,
+            label: `正在查看 ${rel} · 第 ${line} 行`,
+          });
+          bump();
+          return { ok: true, message: `已定位到 ${rel} 第 ${line} 行` };
         }
         return await runOpen(input.path || input.root, exec);
       } catch (error) {

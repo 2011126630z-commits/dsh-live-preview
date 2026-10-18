@@ -30,6 +30,9 @@ window.__ModuleLoader__.load({
         full: '全宽',
         tablet: '平板',
         phone: '手机',
+        locate: '定位',
+        clearFocus: '清除高亮',
+        editing: '正在编辑',
         loading: '加载中…',
         watchBroken: '文件监听已失效，点「刷新」重试',
         previewFailed: '预览服务不可用',
@@ -52,6 +55,9 @@ window.__ModuleLoader__.load({
         full: 'Full',
         tablet: 'Tablet',
         phone: 'Phone',
+        locate: 'Locate',
+        clearFocus: 'Clear highlight',
+        editing: 'Editing',
         loading: 'Loading…',
         watchBroken: 'File watching stopped, press Reload to retry',
         previewFailed: 'Preview service unavailable',
@@ -86,6 +92,13 @@ window.__ModuleLoader__.load({
 .dsh-lp-path{display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;
   color:var(--dsw-alias-label-secondary);border-bottom:1px solid var(--dsw-alias-border-l1);overflow:hidden}
 .dsh-lp-path span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dsh-lp-focus{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;
+  color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2);
+  border-bottom:1px solid var(--dsw-alias-border-l1)}
+.dsh-lp-focus-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-brand-primary);
+  box-shadow:0 0 0 3px rgba(31,111,235,.18);flex:none}
+.dsh-lp-focus-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dsh-lp-mini{height:22px;font-size:12px;padding:0 6px}
 .dsh-lp-body{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--dsw-alias-bg-base)}
 .dsh-lp-frame-wrap{flex:1;min-height:0;display:flex;justify-content:center;background:var(--dsw-alias-bg-base)}
 .dsh-lp-frame{width:100%;height:100%;border:0;background:#fff;display:block}
@@ -181,6 +194,7 @@ window.__ModuleLoader__.load({
         roots: [],
         rev: -1,
         reloadVersion: -1,
+        focus: null,
         error: '',
         watchError: '',
       };
@@ -283,6 +297,7 @@ window.__ModuleLoader__.load({
             ? state.reloadVersion
             : store.get().reloadVersion,
         roots: Array.isArray(state.roots) ? state.roots : store.get().roots,
+        focus: state.focus && typeof state.focus === 'object' ? state.focus : store.get().focus,
         error: '',
       });
       if (!store.get().origin) await loadInfo();
@@ -491,6 +506,10 @@ window.__ModuleLoader__.load({
         'dsh-lp-frame' + (device === 'phone' ? ' dsh-lp-phone' : device === 'tablet' ? ' dsh-lp-tablet' : '');
       const currentPath = snapshot.target || t('empty');
       const errorText = localError || snapshot.error;
+      const focus =
+        snapshot.focus && snapshot.focus.label && Date.now() - (snapshot.focus.at || 0) < 15000
+          ? snapshot.focus
+          : null;
 
       const deviceButton = (kind) =>
         h(
@@ -660,6 +679,34 @@ window.__ModuleLoader__.load({
           ),
         ),
         h('div', { className: 'dsh-lp-path' }, h('span', null, currentPath)),
+        focus
+          ? h(
+              'div',
+              { className: 'dsh-lp-focus' },
+              h('span', { className: 'dsh-lp-focus-dot' }),
+              h('span', { className: 'dsh-lp-focus-label' }, focus.label),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'dsh-lp-btn dsh-lp-mini',
+                  onClick: () => void post('/focus', { action: 'refocus' }),
+                },
+                t('locate'),
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'dsh-lp-btn dsh-lp-icon dsh-lp-mini',
+                  title: t('clearFocus'),
+                  'aria-label': t('clearFocus'),
+                  onClick: () => void post('/focus', { action: 'clear' }),
+                },
+                glyph('close', 12),
+              ),
+            )
+          : null,
         errorText ? h('div', { className: 'dsh-lp-error' }, t('previewFailed') + '：' + errorText) : null,
         snapshot.watchError
           ? h('div', { className: 'dsh-lp-warn' }, t('watchBroken') + '：' + snapshot.watchError)

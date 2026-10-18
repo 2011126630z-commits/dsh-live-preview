@@ -12,8 +12,10 @@
 - 面板浮在界面右侧，拖左边缘可调宽度；宽度与设备模式会记住
 - 工作区 → 目录 → 文件浏览，HTML 文件带 `HTML` 标记
 - **保存即自动刷新**（SSE 优先，断线降级为版本轮询），可开关，另有手动刷新
+- **高亮正在改的那一块**：预览页会自动滚到并描边刚改动的区块，面板顶部显示「正在编辑 …」；
+  保存即自动触发（HTML 按源码行、CSS 按规则选择器），也能通过工具手动指定
 - 全宽 / 768px / 375px 三种预览宽度，可外开浏览器
-- Agent 工具 `live_preview`：`open` / `close` / `refresh` / `root`
+- Agent 工具 `live_preview`：`open` / `close` / `refresh` / `root` / `focus` / `clear`
 - 预览服务只绑本机回环、只读、一次性 token + HttpOnly Cookie、realpath 包含性校验
 - 被预览页面跑在独立 origin，与 Harness 界面隔离
 
@@ -54,6 +56,25 @@
 ```
 
 模型会调用 `live_preview({ action: "open", path: "maas-home-preview/index.html" })`。
+
+## 高亮「正在改的那一块」
+
+监听到文件变化时，插件会判断这次改动落在哪里，并让预览页指过去：
+
+- **HTML**：served 的页面元素上带有 `data-lp-line` 源码行标记；与上一次服务的版本做 diff，取改动行附近最近的
+  区块，滚到视野内并描边。
+- **CSS**：从改动行往前找所属规则的选择器，把所有匹配元素描边（最多 12 个）。
+- 其他文本文件：面板照常显示「正在编辑 … · 第 N 行」，但页面上不描边。
+
+高亮会跟着重载一起走（存在 `sessionStorage` 里），所以刷新之后仍会落在新页面上。也可以显式触发：
+
+```jsonc
+{ "action": "focus", "selector": "#hero" }
+{ "action": "focus", "path": "index.html", "line": 312 }
+{ "action": "clear" }
+```
+
+面板上会显示当前目标，并提供「定位」（重新高亮）和「×」（清除）；约 15 秒后自动淡出。
 
 ## 配置
 

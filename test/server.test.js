@@ -101,6 +101,7 @@ function waitFor(predicate, timeoutMs = 3000, stepMs = 40) {
 test('injectReload adds the marker exactly once', () => {
   const once = injectReload('<html><body><h1>x</h1></body></html>');
   assert.equal(once.split('data-dsh-live-preview').length - 1, 1);
+  assert.match(once, /data-lp-line="\d+"/);
   assert.match(once, /EventSource/);
   assert.match(once, /__live\//);
   assert.match(once, /version/);
@@ -231,12 +232,57 @@ test('blocks encoded traversal outside the preview root', async () => {
   });
 });
 
+test('reports which block changed after an edit', async () => {
+  await withServer('focus', async ({ origin, token, root }) => {
+    await fetch(`${origin}/index.html?t=${encodeURIComponent(token)}`);
+    const before = await (
+      await fetch(`${origin}/__live/focus?t=${encodeURIComponent(token)}`)
+    ).json();
+    assert.equal(before.focus, null);
+
+    await fsp.writeFile(
+      path.join(root, 'index.html'),
+      '<!doctype html><html><body><h1>hello</h1><p>new</p></body></html>',
+      'utf8',
+    );
+    const startedAt = Date.now();
+    let focus = null;
+    while (Date.now() - startedAt < 4000) {
+      const body = await (
+        await fetch(`${origin}/__live/focus?t=${encodeURIComponent(token)}`)
+      ).json();
+      if (body.focus) {
+        focus = body.focus;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    assert.ok(focus, 'focus should be recorded after a change');
+    assert.equal(focus.file, 'index.html');
+    assert.equal(focus.kind, 'lines');
+    assert.ok(focus.from >= 1);
+  });
+});
+
+test('manual focus events reach SSE clients', async () => {
+  await withServer('manual-focus', async ({ origin, token, server }) => {
+    const sse = await openSse(origin, token);
+    try {
+      server.setFocus({ kind: 'selector', selector: '#hero', label: '正在查看 #hero' });
+      await waitFor(() => sse.text().includes('"type":"focus"'));
+      assert.ok(sse.text().includes('#hero'));
+    } finally {
+      sse.close();
+    }
+  });
+});
+
 test('follows file changes with an SSE reload', async () => {
   await withServer('reload', async ({ origin, token, root }) => {
     const sse = await openSse(origin, token);
     try {
       await fsp.writeFile(path.join(root, 'index.html'), '<html><body>changed</body></html>', 'utf8');
-      await waitFor(() => sse.text().includes('data: reload'));
+      await waitFor(() => sse.text().includes('"type":"reload"'));
     } finally {
       sse.close();
     }
@@ -250,10 +296,10 @@ test('suppresses reload broadcasts when auto reload is off', async () => {
     try {
       await fsp.writeFile(path.join(root, 'style.css'), 'body{color:blue}', 'utf8');
       await new Promise((resolve) => setTimeout(resolve, 700));
-      assert.equal(sse.text().includes('data: reload'), false);
+      assert.equal(sse.text().includes('"type":"reload"'), false);
       server.setAutoReload(true);
       server.reloadAll(true);
-      await waitFor(() => sse.text().includes('data: reload'));
+      await waitFor(() => sse.text().includes('"type":"reload"'));
     } finally {
       sse.close();
     }
