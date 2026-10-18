@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/). Entries are written in English and Chinese.
 
+## [0.3.0] — 2026-10-19
+
+### English / English
+
+- Added **Separate window**: pop the preview into its own centered, sized OS window and collapse the in-panel
+  view, so the preview no longer takes space from the conversation. Live reload and the edit highlight keep
+  working inside that window.
+- The panel opens a little narrower by default (42%) and its minimum width is 340 px.
+
+### 中文 / Chinese
+
+- 新增**独立窗口**：把预览弹成单独的、居中带尺寸的系统窗口，并自动收起面板，不再占对话的空间；
+  自动刷新与编辑高亮在窗口里照常工作。
+- 面板默认宽度略小（42%），最小宽度 340px。
+
 ## [0.2.0] — 2026-10-19
 
 ### English / English

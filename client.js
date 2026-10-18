@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
 
     const API = '/dsh-live-preview';
     const STORAGE_KEY = 'dsh-live-preview:prefs';
-    const MIN_WIDTH = 360;
+    const MIN_WIDTH = 340;
     const MAX_WIDTH = 900;
 
     // ---------------------------------------------------------------- i18n
@@ -33,6 +33,8 @@ window.__ModuleLoader__.load({
         locate: '定位',
         clearFocus: '清除高亮',
         editing: '正在编辑',
+        window: '独立窗口',
+        windowBlocked: '浏览器拦截了弹窗，请允许弹窗后重试',
         loading: '加载中…',
         watchBroken: '文件监听已失效，点「刷新」重试',
         previewFailed: '预览服务不可用',
@@ -58,6 +60,8 @@ window.__ModuleLoader__.load({
         locate: 'Locate',
         clearFocus: 'Clear highlight',
         editing: 'Editing',
+        window: 'Separate window',
+        windowBlocked: 'The browser blocked the window; allow popups and retry',
         loading: 'Loading…',
         watchBroken: 'File watching stopped, press Reload to retry',
         previewFailed: 'Preview service unavailable',
@@ -176,6 +180,15 @@ window.__ModuleLoader__.load({
           h('path', { d: 'M14 4h6v6' }),
           h('path', { d: 'M20 4l-8.5 8.5' }),
           h('path', { d: 'M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5' }),
+        );
+      }
+      if (name === 'window') {
+        return h(
+          'svg',
+          common,
+          h('rect', { x: 3, y: 5, width: 18, height: 14, rx: 2 }),
+          h('path', { d: 'M3 9h18' }),
+          h('path', { d: 'M7 12h6' }),
         );
       }
       return h('svg', common, h('circle', { cx: 12, cy: 12, r: 8 }));
@@ -326,7 +339,7 @@ window.__ModuleLoader__.load({
     }
 
     function clampWidth(value) {
-      const fallback = Math.round((window.innerWidth || 1200) * 0.46);
+      const fallback = Math.round((window.innerWidth || 1200) * 0.42);
       const number = Number(value);
       if (!Number.isFinite(number) || number <= 0) {
         return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, fallback));
@@ -499,14 +512,37 @@ window.__ModuleLoader__.load({
         [width],
       );
 
-      if (!snapshot.open) return null;
-
+      const frameClass =
+        'dsh-lp-frame' + (device === 'phone' ? ' dsh-lp-phone' : device === 'tablet' ? ' dsh-lp-tablet' : '');
       const iframeSrc =
         snapshot.origin && snapshot.token && snapshot.target
           ? `${snapshot.origin}/${encodePath(snapshot.target)}?t=${encodeURIComponent(snapshot.token)}&r=${reloadKey}`
           : '';
-      const frameClass =
-        'dsh-lp-frame' + (device === 'phone' ? ' dsh-lp-phone' : device === 'tablet' ? ' dsh-lp-tablet' : '');
+
+      if (!snapshot.open) return null;
+
+      const openWindow = () => {
+        if (!iframeSrc) return;
+        const screenWidth = (window.screen && window.screen.availWidth) || 1280;
+        const screenHeight = (window.screen && window.screen.availHeight) || 900;
+        const winWidth = Math.min(1440, Math.max(880, Math.round(screenWidth * 0.62)));
+        const winHeight = Math.min(1000, Math.max(640, Math.round(screenHeight * 0.82)));
+        const left = Math.max(0, Math.round((screenWidth - winWidth) / 2));
+        const top = Math.max(0, Math.round((screenHeight - winHeight) / 2));
+        const features = `popup=yes,width=${winWidth},height=${winHeight},left=${left},top=${top}`;
+        const popup = window.open(iframeSrc, 'dsh-live-preview-window', features);
+        if (!popup) {
+          store.set({ error: t('windowBlocked') });
+          return;
+        }
+        try {
+          popup.focus();
+        } catch {
+          /* the browser may ignore focus */
+        }
+        void close();
+      };
+
       const currentPath = snapshot.target || t('empty');
       const errorText = localError || snapshot.error;
       const focus =
@@ -601,6 +637,19 @@ window.__ModuleLoader__.load({
           eyeIcon(16),
           h('span', { className: 'dsh-lp-title' }, t('title')),
           h('span', { className: 'dsh-lp-spacer' }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'dsh-lp-btn',
+              title: t('window'),
+              'aria-label': t('window'),
+              disabled: !iframeSrc,
+              onClick: openWindow,
+            },
+            glyph('window'),
+            t('window'),
+          ),
           h(
             'button',
             {
