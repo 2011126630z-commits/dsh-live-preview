@@ -125,6 +125,7 @@ test('injected reload script parses as valid JavaScript', () => {
 
 test('version endpoint advances after a change, without a cookie', async () => {
   await withServer('version', async ({ origin, token, root }) => {
+    await fetch(`${origin}/index.html?t=${encodeURIComponent(token)}`);
     const first = await fetch(`${origin}/__live/version?t=${encodeURIComponent(token)}`);
     assert.equal(first.status, 200);
     const firstBody = await first.json();
@@ -279,6 +280,7 @@ test('manual focus events reach SSE clients', async () => {
 
 test('follows file changes with an SSE reload', async () => {
   await withServer('reload', async ({ origin, token, root }) => {
+    await fetch(`${origin}/index.html?t=${encodeURIComponent(token)}`);
     const sse = await openSse(origin, token);
     try {
       await fsp.writeFile(path.join(root, 'index.html'), '<html><body>changed</body></html>', 'utf8');
@@ -289,8 +291,26 @@ test('follows file changes with an SSE reload', async () => {
   });
 });
 
+test('ignores changes to files the preview never loaded', async () => {
+  await withServer('unrelated', async ({ origin, token, root }) => {
+    await fetch(`${origin}/index.html?t=${encodeURIComponent(token)}`);
+    const sse = await openSse(origin, token);
+    try {
+      await fsp.writeFile(path.join(root, 'service.log'), 'background noise\n', 'utf8');
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      assert.equal(sse.text().includes('"type":"reload"'), false);
+
+      await fsp.writeFile(path.join(root, 'index.html'), '<html><body>changed</body></html>', 'utf8');
+      await waitFor(() => sse.text().includes('"type":"reload"'));
+    } finally {
+      sse.close();
+    }
+  });
+});
+
 test('suppresses reload broadcasts when auto reload is off', async () => {
   await withServer('no-reload', async ({ origin, token, server, root }) => {
+    await fetch(`${origin}/style.css?t=${encodeURIComponent(token)}`);
     server.setAutoReload(false);
     const sse = await openSse(origin, token);
     try {

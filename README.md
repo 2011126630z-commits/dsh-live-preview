@@ -13,7 +13,9 @@ page, and it renders beside the conversation — every save reloads it. The agen
 
 - Preview panel docked to the right of the Harness UI; drag its left edge to resize, width and device mode are remembered
 - Workspace → directory → file browser with an `HTML` badge
-- **Auto reload on save** (SSE, with a version-poll fallback), toggleable, plus a manual reload button
+- **Auto reload on save** (SSE, with a version-poll fallback), toggleable, plus a manual reload button.
+  Only files the preview actually loaded trigger a reload, so unrelated workspace activity (service logs, data
+  dumps) does not keep reloading your page.
 - **Focus on what is being edited** — the preview scrolls to and outlines the block that just changed, and the panel
   shows an "Editing …" chip; automatic on save (HTML by source line, CSS by rule selector) and available through the tool
 - Device widths: full / 768 px / 375 px, and open-in-new-tab
