@@ -11,6 +11,7 @@
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { createPreviewServer } from './lib/preview-server.js';
 import {
   DEFAULT_IGNORE,
@@ -284,6 +285,45 @@ export function apply(ctx, rawConfig) {
     return `${current.origin}/${suffix}`;
   }
 
+  /**
+   * Open the preview URL in the OS default browser.
+   *
+   * `window.open` is denied by the desktop shell (Electron), so "separate window"
+   * goes through the Host instead. The URL is always one we built here, so the
+   * panel cannot ask the Host to launch an arbitrary address.
+   */
+  function openExternally(url) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      try {
+        const platform = process.platform;
+        let command;
+        let args;
+        if (platform === 'win32') {
+          command = 'rundll32';
+          args = ['url.dll,FileProtocolHandler', url];
+        } else if (platform === 'darwin') {
+          command = 'open';
+          args = [url];
+        } else {
+          command = 'xdg-open';
+          args = [url];
+        }
+        const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
+        child.on('error', (error) => done({ ok: false, message: describe(error) }));
+        child.unref();
+        setTimeout(() => done({ ok: true }), 150);
+      } catch (error) {
+        done({ ok: false, message: describe(error) });
+      }
+    });
+  }
+
   async function apiInfo() {
     await preview.start();
     await ensureRoot();
@@ -454,6 +494,14 @@ export function apply(ctx, rawConfig) {
         const sent = preview.reloadAll(true);
         bump();
         sendJson(res, 200, { ok: true, sent });
+        return;
+      }
+      if (req.method === 'POST' && sub === '/open-external') {
+        const url = await previewUrl();
+        const result = await openExternally(url);
+        if (result.ok) state.panelOpen = false;
+        bump();
+        sendJson(res, 200, { ...result, url });
         return;
       }
       sendJson(res, 404, { ok: false, error: `未知接口：${req.method} ${sub}` });

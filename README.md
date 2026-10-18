@@ -19,8 +19,8 @@ page, and it renders beside the conversation — every save reloads it. The agen
 - **Focus on what is being edited** — the preview scrolls to and outlines the block that just changed, and the panel
   shows an "Editing …" chip; automatic on save (HTML by source line, CSS by rule selector) and available through the tool
 - Device widths: full / 768 px / 375 px, and open-in-new-tab
-- **Separate window** — pop the preview into its own sized OS window; the in-panel view collapses so the
-  conversation gets its space back, and live reload / focus keep working inside the window
+- **Separate window** — open the preview in your system default browser and collapse the in-panel view, so the
+  conversation gets its space back; live reload / focus keep working in that window
 - Agent tool `live_preview` with `open` / `close` / `refresh` / `root` / `focus` / `clear`
 - Read-only preview server on loopback, one-time token + HttpOnly cookie, realpath containment checks
 - The previewed page runs on its own origin, isolated from the Harness UI origin
@@ -53,8 +53,9 @@ page, and it renders beside the conversation — every save reloads it. The agen
 - **Auto reload** — whether file changes reload the page
 - **Reload** — reload the current page manually
 - **Open in a new tab** — hand the page to your system browser
-- **Separate window** — open the preview in its own sized window and close the panel, for when the panel
-  feels too wide; auto reload and the edit highlight keep working there
+- **Separate window** — open the preview in your default browser and close the panel, for when the panel feels
+  too wide; auto reload and the edit highlight keep working there. (The desktop shell blocks `window.open`, so
+  the Host opens it instead.)
 - Drag the panel's left edge to resize it
 
 Ask the agent to open a page for you:

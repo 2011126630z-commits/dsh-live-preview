@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/). Entries are written in English and Chinese.
 
+## [0.3.1] — 2026-10-19
+
+### English / English
+
+- Fixed **Separate window** in the desktop app: the shell blocks `window.open`, so the Host now opens the
+  preview URL in the system default browser instead (`POST /dsh-live-preview/open-external`), then collapses
+  the panel. The Host always opens the URL it built itself; the panel cannot request an arbitrary address.
+
+### 中文 / Chinese
+
+- 修复桌面版下的**独立窗口**：桌面外壳会拦截 `window.open`，改为由 Host 端用系统默认浏览器打开预览地址
+  （`POST /dsh-live-preview/open-external`），随后收起面板。Host 只打开自己构造的地址，面板无法让它打开任意 URL。
+
 ## [0.3.0] — 2026-10-19
 
 ### English / English

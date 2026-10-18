@@ -1,6 +1,6 @@
 {
   "name": "dsh-live-preview",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Live-preview panel for DeepSeek Harness: preview workspace pages beside the chat; reloads on every save. · DeepSeek Harness 实时预览插件：边聊边看你的页面，改完自动刷新。",
   "keywords": [
     "deepseek-harness",

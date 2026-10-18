@@ -34,7 +34,7 @@ window.__ModuleLoader__.load({
         clearFocus: '清除高亮',
         editing: '正在编辑',
         window: '独立窗口',
-        windowBlocked: '浏览器拦截了弹窗，请允许弹窗后重试',
+        windowBlocked: '打不开独立窗口，请检查系统默认浏览器',
         loading: '加载中…',
         watchBroken: '文件监听已失效，点「刷新」重试',
         previewFailed: '预览服务不可用',
@@ -61,7 +61,7 @@ window.__ModuleLoader__.load({
         clearFocus: 'Clear highlight',
         editing: 'Editing',
         window: 'Separate window',
-        windowBlocked: 'The browser blocked the window; allow popups and retry',
+        windowBlocked: 'Could not open the separate window; check your default browser',
         loading: 'Loading…',
         watchBroken: 'File watching stopped, press Reload to retry',
         previewFailed: 'Preview service unavailable',
@@ -523,24 +523,18 @@ window.__ModuleLoader__.load({
 
       const openWindow = () => {
         if (!iframeSrc) return;
-        const screenWidth = (window.screen && window.screen.availWidth) || 1280;
-        const screenHeight = (window.screen && window.screen.availHeight) || 900;
-        const winWidth = Math.min(1440, Math.max(880, Math.round(screenWidth * 0.62)));
-        const winHeight = Math.min(1000, Math.max(640, Math.round(screenHeight * 0.82)));
-        const left = Math.max(0, Math.round((screenWidth - winWidth) / 2));
-        const top = Math.max(0, Math.round((screenHeight - winHeight) / 2));
-        const features = `popup=yes,width=${winWidth},height=${winHeight},left=${left},top=${top}`;
-        const popup = window.open(iframeSrc, 'dsh-live-preview-window', features);
-        if (!popup) {
-          store.set({ error: t('windowBlocked') });
-          return;
-        }
-        try {
-          popup.focus();
-        } catch {
-          /* the browser may ignore focus */
-        }
-        void close();
+        void (async () => {
+          try {
+            const result = await post('/open-external', {});
+            if (result && result.ok) {
+              store.set({ open: false });
+              return;
+            }
+            store.set({ error: (result && result.message) || t('windowBlocked') });
+          } catch (error) {
+            store.set({ error: String(error && error.message ? error.message : error) });
+          }
+        })();
       };
 
       const currentPath = snapshot.target || t('empty');
