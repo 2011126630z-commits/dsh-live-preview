@@ -317,6 +317,7 @@ export function apply(ctx, rawConfig) {
       token: current.token,
       reloadVersion: current.version,
       focus: current.focus,
+      clients: current.clients,
       roots: await allowedRoots(),
     };
   }

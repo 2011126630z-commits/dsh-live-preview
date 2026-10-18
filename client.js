@@ -195,6 +195,7 @@ window.__ModuleLoader__.load({
         rev: -1,
         reloadVersion: -1,
         focus: null,
+        clients: 0,
         error: '',
         watchError: '',
       };
@@ -298,6 +299,7 @@ window.__ModuleLoader__.load({
             : store.get().reloadVersion,
         roots: Array.isArray(state.roots) ? state.roots : store.get().roots,
         focus: state.focus && typeof state.focus === 'object' ? state.focus : store.get().focus,
+        clients: typeof state.clients === 'number' ? state.clients : store.get().clients,
         error: '',
       });
       if (!store.get().origin) await loadInfo();
@@ -364,8 +366,9 @@ window.__ModuleLoader__.load({
         savePrefs({ width, device });
       }, [width, device]);
 
-      // The parent drives reloads from the server version counter, so a previewed
-      // page that blocks or strips the injected script still refreshes.
+      // Fallback reload for a preview page whose in-page SSE never connected.
+      // When the page is connected it reloads itself and carries the focus, so
+      // a second reload here would wipe the highlight.
       useEffect(() => {
         const version = snapshot.reloadVersion;
         if (typeof version !== 'number') return;
@@ -375,9 +378,9 @@ window.__ModuleLoader__.load({
         }
         if (version !== lastReloadVersion.current) {
           lastReloadVersion.current = version;
-          setReloadKey((value) => value + 1);
+          if (!snapshot.clients) setReloadKey((value) => value + 1);
         }
-      }, [snapshot.reloadVersion]);
+      }, [snapshot.reloadVersion, snapshot.clients]);
 
       useEffect(() => {
         if (lastRoot.current !== snapshot.root) {
