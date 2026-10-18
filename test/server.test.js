@@ -5,7 +5,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPreviewServer, injectReload } from '../lib/preview-server.js';
-import { isInside, safeResolve, toPosixRel } from '../lib/roots.js';
+import { isInside, listDirectory, safeResolve, toPosixRel } from '../lib/roots.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TMP_ROOT = path.join(HERE, '.tmp');
@@ -129,6 +129,25 @@ test('unauthenticated requests are rejected', async () => {
     const cookie = authed.headers.get('set-cookie') || '';
     assert.match(cookie, /dshprev=/);
   });
+});
+
+test('listDirectory hides dotfiles and ignored folders, directories first', async () => {
+  const root = await makeFixture('list');
+  try {
+    await fsp.mkdir(path.join(root, 'node_modules'));
+    await fsp.writeFile(path.join(root, '.hidden'), 'x', 'utf8');
+    const listing = await listDirectory(root, { ignore: ['node_modules', '.git'] });
+    const names = listing.entries.map((entry) => entry.name);
+    assert.ok(names.includes('index.html'));
+    assert.ok(names.includes('sub'));
+    assert.equal(names.includes('node_modules'), false);
+    assert.equal(names.includes('.hidden'), false);
+    assert.equal(listing.entries[0].type, 'directory');
+    const html = listing.entries.find((entry) => entry.name === 'index.html');
+    assert.equal(html.html, true);
+  } finally {
+    await fsp.rm(root, { recursive: true, force: true });
+  }
 });
 
 test('serves html with reload script and other files by mime type', async () => {
