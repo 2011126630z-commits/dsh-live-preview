@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/). Entries are written in English and Chinese.
 
+## [0.4.0] — 2026-10-19
+
+### English / English
+
+- Fixed a blank panel after a Harness restart: the last open page is remembered in the browser and restored
+  automatically (the panel reopens only if it was open).
+- Fixed the preview root falling back to the application profile directory when the workspace registry was not
+  ready at startup; it now switches to a real workspace as soon as one is available.
+- Performance: file watching now targets only the files the preview actually loaded (up to 400) instead of
+  recursing over the whole workspace, so unrelated background writes cost nothing.
+- The panel shows the file browser instead of an empty body when there is no target.
+
+### 中文 / Chinese
+
+- 修复 Harness 重启后面板空白：最后一个打开的页面记在浏览器里，会自动恢复（只有之前是打开状态才恢复）。
+- 修复启动时工作区注册表未就绪、预览根目录回落到应用 profile 目录的问题；有真实工作区后会立即切回去。
+- 性能：文件监听只针对预览页真正加载过的文件（最多 400 个），不再递归监听整个工作区，后台写日志不再有开销。
+- 没有目标页时面板显示文件浏览器，而不是一片空白。
+
 ## [0.3.1] — 2026-10-19
 
 ### English / English

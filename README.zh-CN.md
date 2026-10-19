@@ -16,6 +16,7 @@
 - **高亮正在改的那一块**：预览页会自动滚到并描边刚改动的区块，面板顶部显示「正在编辑 …」；
   保存即自动触发（HTML 按源码行、CSS 按规则选择器），也能通过工具手动指定
 - 全宽 / 768px / 375px 三种预览宽度，可外开浏览器
+- **Harness 重启后自动恢复**：最后一个打开的页面记在浏览器里，重启后自动恢复（之前是打开状态才恢复），不再一片空白
 - **独立窗口**：在系统默认浏览器里打开预览，并收起面板，把空间还给对话；自动刷新和高亮在窗口里照常工作
 - Agent 工具 `live_preview`：`open` / `close` / `refresh` / `root` / `focus` / `clear`
 - 预览服务只绑本机回环、只读、一次性 token + HttpOnly Cookie、realpath 包含性校验
@@ -24,7 +25,7 @@
 ## 环境要求
 
 - 带 Web 界面的 DeepSeek Harness（`dsh web` 或桌面版）
-- Harness 所在机器上 Node.js 20+（用到递归 `fs.watch`）
+- Harness 所在机器上 Node.js 20+
 
 ## 安装
 
@@ -107,7 +108,7 @@ Harness Web 界面（:59936，带登录态）
 Host 插件（零第三方依赖）
 ├── 回环预览服务 :8123（只读）
 │   ├── 静态文件 + 热重载脚本注入
-│   ├── fs.watch(递归) → SSE 广播（另有 /__live/version 轮询兜底）
+│   ├── 逐文件 fs.watch（只监听预览页加载过的文件）→ SSE 广播（另有 /__live/version 轮询兜底）
 │   └── token + Cookie 鉴权、realpath 包含性校验
 └── 同源接口：/info /state /tree /root /panel /refresh
 ```

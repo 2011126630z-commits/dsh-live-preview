@@ -19,6 +19,8 @@ page, and it renders beside the conversation — every save reloads it. The agen
 - **Focus on what is being edited** — the preview scrolls to and outlines the block that just changed, and the panel
   shows an "Editing …" chip; automatic on save (HTML by source line, CSS by rule selector) and available through the tool
 - Device widths: full / 768 px / 375 px, and open-in-new-tab
+- **Survives a Harness restart** — the last open page is remembered in the browser and restored when the panel
+  was open, so a restart no longer leaves it blank
 - **Separate window** — open the preview in your system default browser and collapse the in-panel view, so the
   conversation gets its space back; live reload / focus keep working in that window
 - Agent tool `live_preview` with `open` / `close` / `refresh` / `root` / `focus` / `clear`
@@ -28,7 +30,7 @@ page, and it renders beside the conversation — every save reloads it. The agen
 ## Requirements
 
 - DeepSeek Harness with the Web UI (the `dsh web` app or the desktop app)
-- Node.js 20+ on the Harness host (the plugin uses recursive `fs.watch`)
+- Node.js 20+ on the Harness host
 
 ## Install
 
@@ -114,7 +116,7 @@ Harness Web UI (:59936, authenticated)
 Host plugin (zero dependencies)
 ├── loopback preview server :8123 (read-only)
 │   ├── static files + reload script injection
-│   ├── fs.watch(recursive) → SSE reload broadcast (+ /__live/version fallback)
+│   ├── per-file fs.watch (only served files) → SSE reload (+ /__live/version fallback)
 │   └── token + cookie auth, realpath containment
 └── same-origin API: /info /state /tree /root /panel /refresh
 ```

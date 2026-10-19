@@ -354,6 +354,60 @@ window.__ModuleLoader__.load({
         .join('/');
     }
 
+    function joinPath(root, rel) {
+      const base = String(root || '').replace(/[\\/]+$/, '');
+      const sep = base.includes('\\') ? '\\' : '/';
+      return base + sep + String(rel || '').replace(/^[\\/]+/, '').split('/').join(sep);
+    }
+
+    // The Host forgets the preview target when it restarts; the panel restores
+    // the last open page from localStorage so a restart does not leave it blank.
+    let restored = false;
+    let persistedKey = '';
+
+    async function restorePreview() {
+      if (restored) return;
+      const current = store.get();
+      if (current.target) {
+        restored = true;
+        return;
+      }
+      const prefs = loadPrefs();
+      if (prefs.lastOpen === false || !prefs.lastTarget || !prefs.lastRoot) {
+        restored = true;
+        return;
+      }
+      const candidates = [prefs.lastRoot, current.root].filter(
+        (value, index, all) => value && all.indexOf(value) === index,
+      );
+      for (const root of candidates) {
+        try {
+          const data = await post('/panel', { path: joinPath(root, prefs.lastTarget) });
+          if (!data || data.ok === false) continue;
+          store.set({
+            open: true,
+            root: data.root || root,
+            target: data.target || prefs.lastTarget,
+            rev: typeof data.rev === 'number' ? data.rev : store.get().rev,
+          });
+          restored = true;
+          return;
+        } catch {
+          /* try the next candidate root */
+        }
+      }
+      restored = true;
+    }
+
+    function persistState() {
+      const current = store.get();
+      if (!current.target || !current.root) return;
+      const key = `${current.root}|${current.target}|${current.open ? '1' : '0'}`;
+      if (key === persistedKey) return;
+      persistedKey = key;
+      savePrefs({ lastRoot: current.root, lastTarget: current.target, lastOpen: current.open });
+    }
+
     // -------------------------------------------------------------- panel
     function LivePreviewPanel() {
       const snapshot = useSyncExternalStore(store.subscribe, store.get, store.get);
@@ -405,7 +459,8 @@ window.__ModuleLoader__.load({
       }, [snapshot.root]);
 
       useEffect(() => {
-        if (snapshot.open && !snapshot.target) setBrowsing(true);
+        if (!snapshot.open) return;
+        setBrowsing(!snapshot.target);
       }, [snapshot.open, snapshot.target]);
 
       const loadTree = useCallback(async (absoluteDir) => {
@@ -814,6 +869,8 @@ window.__ModuleLoader__.load({
           try {
             if (!store.get().origin) await loadInfo();
             await syncState();
+            await restorePreview();
+            persistState();
           } catch (error) {
             store.set({ error: String(error && error.message ? error.message : error) });
           }

@@ -240,18 +240,27 @@ export function apply(ctx, rawConfig) {
           score += 100 + root.length / 1000;
         }
       }
-      return { root, title: meta.title, score };
+      return { root, title: meta.title, fallback: meta.fallback === true, score };
     });
     roots.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title));
-    return roots.map(({ root, title }) => ({ root, title }));
+    return roots.map(({ root, title, fallback }) => ({ root, title, fallback }));
   }
 
+  /** Root we had to fall back to before any workspace was available. */
+  let fallbackRoot = null;
+
   async function ensureRoot(cwdHint) {
-    const visible = preview.getState();
-    if (visible.root) return visible.root;
     const roots = await allowedRoots(cwdHint);
-    if (!roots.length) return null;
-    return preview.setRoot(roots[0].root);
+    const current = preview.getState().root;
+    const currentIsFallback = Boolean(current && fallbackRoot && samePath(current, fallbackRoot));
+    if (current && !currentIsFallback) return current;
+    const best = roots[0];
+    if (!best) return current || null;
+    if (current && currentIsFallback && best.fallback && samePath(best.root, current)) {
+      return current;
+    }
+    fallbackRoot = best.fallback ? best.root : null;
+    return preview.setRoot(best.root);
   }
 
   async function resolveTarget(absPath) {
@@ -398,6 +407,7 @@ export function apply(ctx, rawConfig) {
       const target = await resolveTarget(abs);
       if (!samePath(preview.getState().root || '', target.base)) {
         await preview.setRoot(target.base);
+        fallbackRoot = null;
       }
       state.target = target.fileAbs ? toPosixRel(target.base, target.fileAbs) : null;
       state.panelOpen = true;
@@ -435,6 +445,7 @@ export function apply(ctx, rawConfig) {
     if (!matched) throw new Error('只能选择已注册的工作区作为预览根目录');
     await preview.start();
     await preview.setRoot(matched.root);
+    fallbackRoot = null;
     state.target = null;
     state.panelOpen = true;
     bump();
@@ -536,6 +547,7 @@ export function apply(ctx, rawConfig) {
     const target = await resolveTarget(abs);
     await preview.start();
     await preview.setRoot(target.base);
+    fallbackRoot = null;
     state.target = target.fileAbs ? toPosixRel(target.base, target.fileAbs) : null;
     state.panelOpen = true;
     bump();
