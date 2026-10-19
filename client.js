@@ -78,7 +78,9 @@ window.__ModuleLoader__.load({
 .dsh-lp-panel{position:fixed;top:0;right:0;bottom:0;z-index:60;display:flex;flex-direction:column;
   background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);
   border-left:1px solid var(--dsw-alias-border-l1);box-shadow:-12px 0 32px rgba(0,0,0,.14);
-  pointer-events:auto;font:13px/1.45 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;min-width:${MIN_WIDTH}px}
+  pointer-events:auto;font:13px/1.45 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;min-width:${MIN_WIDTH}px;
+  -webkit-app-region:no-drag}
+.dsh-lp-panel,.dsh-lp-panel *{-webkit-app-region:no-drag}
 .dsh-lp-resize{position:absolute;left:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:1}
 .dsh-lp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}
 .dsh-lp-title{font-weight:600;font-size:13px}
@@ -125,7 +127,8 @@ window.__ModuleLoader__.load({
   border:1px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-state-warn-primary)}
 .dsh-lp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .dsh-lp-toggle{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;position:relative;
-  border:1px solid transparent;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
+  border:1px solid transparent;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;
+  -webkit-app-region:no-drag}
 .dsh-lp-toggle:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .dsh-lp-toggle[aria-pressed="true"]{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-border-l1)}
 .dsh-lp-dot{position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-error-primary)}
@@ -362,11 +365,19 @@ window.__ModuleLoader__.load({
 
     // The Host forgets the preview target when it restarts; the panel restores
     // the last open page from localStorage so a restart does not leave it blank.
+    // Any explicit user action stops restoring for this page load: otherwise a
+    // "close" could be undone by the restore right after it.
     let restored = false;
+    let userActed = false;
     let persistedKey = '';
 
+    function noteUserAction() {
+      userActed = true;
+      restored = true;
+    }
+
     async function restorePreview() {
-      if (restored) return;
+      if (restored || userActed) return;
       const current = store.get();
       if (current.target) {
         restored = true;
@@ -487,6 +498,7 @@ window.__ModuleLoader__.load({
       }, [snapshot.open, browsing, snapshot.root, dir, loadTree]);
 
       const openFile = useCallback(async (absolutePath) => {
+        noteUserAction();
         setBusy(true);
         setLocalError('');
         try {
@@ -508,6 +520,7 @@ window.__ModuleLoader__.load({
 
       const pickRoot = useCallback(async (rootPath) => {
         if (!rootPath) return;
+        noteUserAction();
         setBusy(true);
         setLocalError('');
         try {
@@ -530,6 +543,8 @@ window.__ModuleLoader__.load({
       }, []);
 
       const close = useCallback(async () => {
+        noteUserAction();
+        savePrefs({ lastOpen: false });
         try {
           await post('/panel', { panelOpen: false });
         } catch {
@@ -537,6 +552,21 @@ window.__ModuleLoader__.load({
         }
         store.set({ open: false });
       }, []);
+
+      // Escape always closes the panel, even if the top-right corner is covered
+      // by the desktop window controls.
+      useEffect(() => {
+        if (!snapshot.open) return undefined;
+        const onKeyDown = (event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            void close();
+          }
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+        return () => document.removeEventListener('keydown', onKeyDown, true);
+      }, [snapshot.open, close]);
 
       const toggleAutoReload = useCallback(async () => {
         const next = !store.get().autoReload;
@@ -683,9 +713,19 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { className: 'dsh-lp-head' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'dsh-lp-btn dsh-lp-icon',
+              title: t('close'),
+              'aria-label': t('close'),
+              onClick: close,
+            },
+            glyph('close'),
+          ),
           eyeIcon(16),
           h('span', { className: 'dsh-lp-title' }, t('title')),
-          h('span', { className: 'dsh-lp-spacer' }),
           h(
             'button',
             {
@@ -699,17 +739,7 @@ window.__ModuleLoader__.load({
             glyph('window'),
             t('window'),
           ),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dsh-lp-btn dsh-lp-icon',
-              title: t('close'),
-              'aria-label': t('close'),
-              onClick: close,
-            },
-            glyph('close'),
-          ),
+          h('span', { className: 'dsh-lp-spacer' }),
         ),
         h(
           'div',
@@ -823,7 +853,9 @@ window.__ModuleLoader__.load({
       const lang = useLang();
       const t = (key) => translate(lang, key);
       const onClick = async () => {
+        noteUserAction();
         if (snapshot.open) {
+          savePrefs({ lastOpen: false });
           try {
             await post('/panel', { panelOpen: false });
           } catch {

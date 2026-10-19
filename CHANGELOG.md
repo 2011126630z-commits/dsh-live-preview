@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/). Entries are written in English and Chinese.
 
+## [0.4.1] — 2026-10-19
+
+### English / English
+
+- Fixed the panel not closing in the desktop app: the close control sat under the window controls, and the restart
+  restore could reopen the panel right after a close. The close button now sits at the left of the header, the panel
+  and its toolbar opt out of the window drag region, `Escape` closes the panel, and an explicit close wins over the
+  restore logic.
+- The "Separate window" button moved next to the title, away from the window controls.
+
+### 中文 / Chinese
+
+- 修复桌面版面板关不掉：关闭按钮正好落在窗口控制按钮下面，且重启恢复逻辑可能在关闭后立刻又把它打开。
+  现在关闭按钮移到标题左侧、面板与工具栏声明为 `no-drag` 区域、`Esc` 也能关闭，并且用户主动关闭优先于恢复逻辑。
+- 「独立窗口」按钮移到标题旁，避开窗口控制按钮。
+
 ## [0.4.0] — 2026-10-19
 
 ### English / English
